@@ -14,14 +14,20 @@ def filterContentFromLine(raw_string):
     return re.sub(non_letter_non_space_regex, "", content).lower()
 
 
-def generateCardAnswer(translation_obj):
+def generateCardAnswer(word):
     answer = ""
     index = 1
-    for key in translation_obj:
-        for meaning in translation_obj.get(key):
-            answer += f"<strong> </strong>{str(index)}. {meaning}\n"
-            index = index + 1
-    return answer
+    translation_obj = dictionary.meaning(word, disable_errors=True)
+    try:
+        for key in translation_obj:
+            for meaning in translation_obj.get(key):
+                answer += f"<strong> </strong>{str(index)}. {meaning}<br>"
+                index = index + 1
+        return answer
+    # if None was returned which means word wasn't find in dictionary
+    except TypeError:
+        print(f"Can't find word '{word}' in dictionary, no card is generated.")
+        return None
 
 
 my_model = genanki.Model(
@@ -51,10 +57,11 @@ highlights = data.split(highlight_separator)
 for raw_string in highlights:
     word_list = filterContentFromLine(raw_string).split(" ")
     for word in word_list:
-        translation_obj = dictionary.meaning(word)
-        my_note = genanki.Note(
-            model=my_model,
-            fields=[word, generateCardAnswer(translation_obj)])
-        my_deck.add_note(my_note)
+        card_answer = generateCardAnswer(word)
+        if card_answer is not None:
+            my_note = genanki.Note(
+                model=my_model,
+                fields=[word, card_answer])
+            my_deck.add_note(my_note)
 
 genanki.Package(my_deck).write_to_file('output.apkg')
